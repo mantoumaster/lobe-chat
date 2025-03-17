@@ -47,22 +47,22 @@ export const DATA_EXPORT_CONFIG = {
   relationTables: [
     {
       relations: [
-        { sourceField: 'id', sourceTable: 'agents', field: 'agentId' },
+        { field: 'agentId', sourceField: 'id', sourceTable: 'agents' },
         { sourceField: 'sessionId', sourceTable: 'sessions' },
       ],
       table: 'agentsToSessions',
     },
-    // {
-    //   relations: [
-    //     { sourceField: 'agentId', sourceTable: 'agents' },
-    //     { sourceField: 'fileId', sourceTable: 'files' },
-    //   ],
-    //   table: 'agentsFiles',
-    // },
-    // {
-    //   relations: [{ field: 'sessionId', sourceTable: 'sessions' }],
-    //   table: 'filesToSessions',
-    // },
+    {
+      relations: [
+        { sourceField: 'agentId', sourceTable: 'agents' },
+        { sourceField: 'fileId', sourceTable: 'files' },
+      ],
+      table: 'agentsFiles',
+    },
+    {
+      relations: [{ field: 'sessionId', sourceTable: 'sessions' }],
+      table: 'filesToSessions',
+    },
     // {
     //   relations: [{ field: 'id', sourceTable: 'chunks' }],
     //   table: 'fileChunks',
@@ -115,10 +115,13 @@ export const DATA_EXPORT_CONFIG = {
 };
 
 export class DataExporterRepos {
-  constructor(
-    private db: LobeChatDatabase,
-    private userId: string,
-  ) {}
+  private userId: string;
+  private db: LobeChatDatabase;
+
+  constructor(db: LobeChatDatabase, userId: string) {
+    this.db = db;
+    this.userId = userId;
+  }
 
   private removeUserId(data: any[]) {
     return data.map((item) => {
@@ -134,17 +137,31 @@ export class DataExporterRepos {
     if (!tableObj) throw new Error(`Table ${table} not found`);
 
     try {
-      let where;
+      const conditions = [];
 
-      const conditions = config.relations.map((relation) => {
+      // 处理每个关联条件
+      for (const relation of config.relations) {
         const sourceData = existingData[relation.sourceTable] || [];
 
-        const sourceIds = sourceData.map((item) => item[relation.sourceField || 'id']);
-        console.log(sourceIds);
-        return inArray(tableObj[relation.field], sourceIds);
-      });
+        // 如果源数据为空，这个表可能无法查询到任何数据
+        if (sourceData.length === 0) {
+          console.log(
+            `Source table ${relation.sourceTable} has no data, skipping query for ${table}`,
+          );
+          return [];
+        }
 
-      where = conditions.length === 1 ? conditions[0] : and(...conditions);
+        const sourceIds = sourceData.map((item) => item[relation.sourceField || 'id']);
+        conditions.push(inArray(tableObj[relation.field], sourceIds));
+      }
+
+      // 如果表有userId字段并且不是users表，添加用户过滤
+      if ('userId' in tableObj && table !== 'users' && !config.relations) {
+        conditions.push(eq(tableObj.userId, this.userId));
+      }
+
+      // 组合所有条件
+      const where = conditions.length === 1 ? conditions[0] : and(...conditions);
 
       // @ts-expect-error query
       const result = await this.db.query[table].findMany({ where });
@@ -204,10 +221,22 @@ export class DataExporterRepos {
     console.log('Querying relation tables...');
     const relationResults = await pMap(
       DATA_EXPORT_CONFIG.relationTables,
-      async (config) => ({
-        data: await this.queryTable(config, result),
-        table: config.table,
-      }),
+      async (config) => {
+        // 检查所有依赖的源表是否有数据
+        const allSourcesHaveData = config.relations.every(
+          (relation) => (result[relation.sourceTable] || []).length > 0,
+        );
+
+        if (!allSourcesHaveData) {
+          console.log(`Skipping table ${config.table} as some source tables have no data`);
+          return { data: [], table: config.table };
+        }
+
+        return {
+          data: await this.queryTable(config, result),
+          table: config.table,
+        };
+      },
       { concurrency },
     );
 

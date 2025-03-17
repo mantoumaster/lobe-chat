@@ -21,7 +21,7 @@ const IndexedDBStorage = memo(() => {
 
     const percent = (usage / quota) * 100;
 
-    return { percent: percent < 1 ? 2 : percent, total: quota, used: usage };
+    return { percent: percent < 1 ? 1 : percent, total: quota, used: usage };
   });
 
   return (

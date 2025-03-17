@@ -339,6 +339,22 @@ export default {
   },
   storage: {
     actions: {
+      export: {
+        button: '导出',
+        exportType: {
+          agent: '导出助手设定',
+          agentWithMessage: '导出助手和消息',
+          all: '导出全局设置和所有助手数据',
+          allAgent: '导出所有助手设定',
+          allAgentWithMessage: '导出所有助手和消息',
+          globalSetting: '导出全局设置',
+        },
+        title: '导出数据',
+      },
+      import: {
+        button: '导入',
+        title: '导入数据',
+      },
       title: '高级操作',
     },
     desc: '当前浏览器中的存储用量',
