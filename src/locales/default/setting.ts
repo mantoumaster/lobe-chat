@@ -337,6 +337,17 @@ export default {
     },
     title: '主题设置',
   },
+  storage: {
+    actions: {
+      title: '高级操作',
+    },
+    desc: '当前浏览器中的存储用量',
+    embeddings: {
+      used: '向量存储',
+    },
+    title: '数据存储',
+    used: '存储用量',
+  },
   submitAgentModal: {
     button: '提交助手',
     identifier: 'identifier 助手标识符',
@@ -429,6 +440,7 @@ export default {
     'experiment': '实验',
     'llm': '语言模型',
     'provider': 'AI 服务商',
+    'storage': '数据存储',
     'sync': '云端同步',
     'system-agent': '系统助手',
     'tts': '语音服务',

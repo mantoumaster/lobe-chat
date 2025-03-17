@@ -146,6 +146,7 @@ export class DataExporterRepos {
 
       where = conditions.length === 1 ? conditions[0] : and(...conditions);
 
+      // @ts-expect-error query
       const result = await this.db.query[table].findMany({ where });
 
       // 只对使用 userId 查询的表移除 userId 字段
@@ -169,6 +170,7 @@ export class DataExporterRepos {
       const userField = config.userField || 'userId';
       const where = eq(tableObj[userField], this.userId);
 
+      // @ts-expect-error query
       const result = await this.db.query[table].findMany({ where });
 
       // 只对使用 userId 查询的表移除 userId 字段
